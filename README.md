@@ -19,8 +19,7 @@ This Quick Start provides monitoring for a multi-tenant environment by using New
 
 # Option 1 - Deploy Using CloudFormation Template in New Relic S3 Bucket.
 
-1. Skip Steps included within "Prerequisites" 
-2. Complete Steps included included within "Instructions"
+1. Complete Steps included included within "Instructions"
 
           Note: Use Templates provided below for Option 1.
           A) Template to Create Quick Start with a New VPC: 
@@ -33,7 +32,7 @@ This Quick Start provides monitoring for a multi-tenant environment by using New
 1. Complete Steps included within "Prerequisites" 
 2. Complete Steps included included within "Instructions"
 
-## Prerequisites
+# Prerequisites
 1. GIT Clone the Repository
 
           A) git clone {git clone url}
@@ -57,7 +56,7 @@ This Quick Start provides monitoring for a multi-tenant environment by using New
 9. Create the Stack using Master Template URL for S3
 10. Following Instructions on Github for Stack creation
 
-## Instructions
+# Instructions
 1. Create a New Relic Account. 
 
           NOTE: The New Relic account must have the following services at a minimum for this Quick Start to work: 
