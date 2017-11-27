@@ -1,4 +1,5 @@
 'use strict';
+const newrelic = require('newrelic');
 
 // Declare library dependencies
 const express = require('express');
@@ -22,7 +23,8 @@ const tokenManager = require('../shared-modules/token-manager/token-manager.js')
 
 // Instantiate application
 var app = express();
-
+//Get hostname
+var hostname = tokenManager.getOS();
 // Configure middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -33,6 +35,9 @@ app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
     res.header("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+    if (hostname) {
+        newrelic.addCustomParameter('req_host', hostname);
+    }
     next();
 });
 
@@ -68,14 +73,22 @@ app.post('/auth', function (req, res) {
             // authenticate user to in Cognito user pool
             var cognitoUser = new AWS.CognitoIdentityServiceProvider.CognitoUser(userData);
 
+            var nrauthclaims = {
+                "sub": userPoolLookup.sub,
+                "tenant_id": userPoolLookup.tenant_id,
+                "username": userPoolLookup.id
+            };
+
             cognitoUser.authenticateUser(authenticationDetails, {
                 onSuccess: function (result) {
+                    newrelic.addCustomParameters(nrauthclaims);
                     // get the ID token
                     var idToken = result.getIdToken().getJwtToken();
                     var AccessToken = result.getAccessToken().getJwtToken();
                     res.json({token: idToken, access: AccessToken});
                 },
                 onFailure: function(err) {
+                    newrelic.noticeError(err.message, nrauthclaims);
                     if (res.status != 400) {
                         res.json(err);
                         return;
@@ -114,6 +127,7 @@ app.post('/auth', function (req, res) {
         }
         else {
             winston.error("Error Authenticating User: ", error);
+            newrelic.noticeError(error, user);
             res.status(404);
             res.json(error);
         }

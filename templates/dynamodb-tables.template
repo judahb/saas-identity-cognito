@@ -56,12 +56,12 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-      - AttributeName: tenantId
+      - AttributeName: tenant_id
         AttributeType: S
       - AttributeName: productId
         AttributeType: S
       KeySchema:
-      - AttributeName: tenantId
+      - AttributeName: tenant_id
         KeyType: HASH
       - AttributeName: productId
         KeyType: RANGE
@@ -73,12 +73,12 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-      - AttributeName: tenantId
+      - AttributeName: tenant_id
         AttributeType: S
       - AttributeName: orderId
         AttributeType: S
       KeySchema:
-      - AttributeName: tenantId
+      - AttributeName: tenant_id
         KeyType: HASH
       - AttributeName: orderId
         KeyType: RANGE

@@ -1,4 +1,5 @@
 'use strict';
+const newrelic = require('newrelic');
 
 // Declare library dependencies
 const express = require('express');
@@ -20,6 +21,12 @@ var userURL   = configuration.url.user;
 // Instantiate application
 var app = express();
 
+//Configure Token Manager
+const tokenManager = require('../shared-modules/token-manager/token-manager.js');
+
+//Get hostname
+var hostname = tokenManager.getOS();
+
 // Configure middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -29,6 +36,9 @@ app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
     res.header("Access-Control-Allow-Headers", "Content-Type, Origin, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token, Access-Control-Allow-Headers, X-Requested-With, Access-Control-Allow-Origin");
+    if (hostname) {
+        newrelic.addCustomParameter('req_host', hostname);
+    }
     // intercept OPTIONS method
     if ('OPTIONS' == req.method) {
         res.send(200);
@@ -73,10 +83,13 @@ app.post('/reg', function (req, res) {
                 })
                 .then(function () {
                     winston.debug("Tenant registered: " + tenant.id);
+                    newrelic.addCustomParameters(tenant);
                     res.status(200).send("Tenant " + tenant.id + " registered");
                 })
                 .catch(function (error) {
                     winston.error("Error registering new tenant: " + error.message);
+                    newrelic.addCustomParameters(tenant);
+                    newrelic.noticeError(error.message, tenant);
                     res.status(400).send("Error registering tenant: " + error.message);
                 });
         }

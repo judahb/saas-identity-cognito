@@ -60,6 +60,10 @@ Parameters:
   ContainerPort:
     Description: The Container Port
     Type: Number
+  NewRelicLicenseKey:
+      Description: The New Relic License Key for New Relic Account.
+      Type: String
+      Default: NEW_RELIC_LICENSE_KEY
 Resources:
   Service:
     Type: AWS::ECS::Service
@@ -89,6 +93,10 @@ Resources:
         Environment:
         - Name: SERVICE_URL
           Value: !Ref ServiceUrl
+        - Name: NEW_RELIC_APP_NAME
+          Value: !Ref ServiceName
+        - Name: NEW_RELIC_LICENSE_KEY
+          Value: !Ref NewRelicLicenseKey
         - Name: AWS_ACCOUNT_ID
           Value: !Ref AWS::AccountId
         - Name: AWS_REGION

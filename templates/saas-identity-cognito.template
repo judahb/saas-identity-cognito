@@ -40,6 +40,11 @@ Metadata:
       - TenantTable
       - ProductTable
       - OrderTable
+    - Label:
+        default: New Relic License Configuration
+      Parameters:
+      - NewRelicLicenseKey
+      - NewRelicRumBeacon
     ParameterLabels:
       AvailabilityZones:
         default: Availability Zones
@@ -75,6 +80,10 @@ Metadata:
         default: Product
       OrderTable:
         default: Order
+      NewRelicLicenseKey:
+        default: New Relic License
+      NewRelicRumBeacon:
+        default: New Relic JavaScript Agent (RUM) Beacon
 Parameters:
   KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
@@ -100,7 +109,7 @@ Parameters:
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    Default: quickstart-reference
+    Default: saas-identity-cognito-newrelic
     Description: S3 bucket name for the Quick Start assets. Quick Start bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
@@ -109,7 +118,7 @@ Parameters:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and a forward slash (/) at the end of the prefix.
-    Default: saas/identity/cognito/latest/
+    Default: 1/
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
@@ -146,6 +155,14 @@ Parameters:
     Type: String
     Description: The DynamoDB Table for Orders of the Multi-Tenant System
     Default: Order
+  NewRelicLicenseKey:
+      Description: The New Relic License Key for New Relic Account.
+      Type: String
+      Default: NEW_RELIC_LICENSE_KEY
+  NewRelicRumBeacon:
+    Description: New Relic JavaScript Agent URL for RUM
+    Type: String
+    Default: '{beacon:"bam.nr-data.net",errorBeacon:"bam.nr-data.net",licenseKey:"1234",applicationID:"5678",sa:1}'
 Rules:
   KeyPairsNotEmpty:
     Assertions:
@@ -196,6 +213,7 @@ Resources:
         VPC: !Ref VPCID
         KeyName: !Ref KeyPairName
         SecurityGroup: !GetAtt SecurityGroups.Outputs.ECSHostSecurityGroup
+        NewRelicLicenseKey: !Ref NewRelicLicenseKey
         Subnets:
           !Join
           - ','
@@ -235,6 +253,7 @@ Resources:
         ServiceName: client
         TemplateBucket: !GetAtt ZipFiles.Outputs.AssetBucket
         TemplatePrefix: !Ref QSS3KeyPrefix
+        NewRelicRumBeacon: !Ref NewRelicRumBeacon
   WebPerm:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -281,6 +300,7 @@ Resources:
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
+        NewRelicLicenseKey: !Ref NewRelicLicenseKey
   AuthService:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -306,6 +326,7 @@ Resources:
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
+        NewRelicLicenseKey: !Ref NewRelicLicenseKey
   TenantService:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -331,6 +352,7 @@ Resources:
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
+        NewRelicLicenseKey: !Ref NewRelicLicenseKey
   RegService:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -356,6 +378,7 @@ Resources:
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
+        NewRelicLicenseKey: !Ref NewRelicLicenseKey
   SysService:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -381,6 +404,7 @@ Resources:
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
+        NewRelicLicenseKey: !Ref NewRelicLicenseKey
   ProductService:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -406,6 +430,7 @@ Resources:
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
+        NewRelicLicenseKey: !Ref NewRelicLicenseKey
   OrderService:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -431,6 +456,7 @@ Resources:
         CloudFormationExecutionRole: !GetAtt Role.Outputs.CloudFormationExecutionRole
         ArtifactBucket: !GetAtt BucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt BucketRepository.Outputs.Repository
+        NewRelicLicenseKey: !Ref NewRelicLicenseKey
   WaitCondition:
     Type: AWS::CloudFormation::WaitCondition
     DependsOn:

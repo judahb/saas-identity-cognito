@@ -7,7 +7,15 @@
  * # ProductDeleteCtrl
  * Controller of the clientApp
  */
-angular.module('clientApp').controller('ProductDeleteCtrl', function ($scope, $location, $http, $route, $routeParams, Constants) {
+angular.module('clientApp').controller('ProductDeleteCtrl', function ($scope, $location, $http, $route, $routeParams, $rootScope, Constants) {
+//New Relic Code for SPA
+  newrelic.interaction()
+    .setAttribute('session_id', $rootScope.session_id)
+    .setAttribute('role', $rootScope.userRole)
+    .setAttribute('tenant_id', $rootScope.tenant_id)
+    .setAttribute('username', $rootScope.currentUser)
+    .setAttribute('action', "product-delete")
+    .save();
   // fetch the item to delete
   $http.get(Constants.PRODUCT_MANAGER_URL + '/product/' + $routeParams.id)
     .then(function(response) {

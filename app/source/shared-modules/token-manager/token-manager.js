@@ -5,7 +5,7 @@ const jwtDecode = require('jwt-decode');
 const request = require('request');
 const async = require('async');
 const AWS = require('aws-sdk');
-
+const os = require("os");
 //Configure Environment
 const configModule = require('../config-helper/config.js');
 var configuration = configModule.configure(process.env.NODE_ENV);
@@ -33,6 +33,68 @@ module.exports.getTenantId = function(req) {
             tenantId = decodedIdToken['custom:tenant_id'];
     }
     return tenantId;
+}
+
+/**
+ * USED FOR NEW RELIC RELATIONSHIP
+ * Extract an id token from a request, decode it and extract the SESSION from an aggregate of JWT Claims
+ * id from the token.
+ * @param req A request Token
+ * @returns A Session ID
+ */
+module.exports.getSessionID = function(req) {
+    var session_id = '';
+    var bearerToken = req.get('Authorization');
+    if (bearerToken) {
+        bearerToken = bearerToken.substring(bearerToken.indexOf(' ') + 1);
+        var decodedIdToken = jwtDecode(bearerToken);
+        if (decodedIdToken)
+            session_id = decodedIdToken['custom:tenant_id'] + '_' + decodedIdToken['sub'] + '_' + decodedIdToken['auth_time'];
+    }
+    return session_id;
+}
+
+/**
+ * USED TO INJECT SAAS CONTEXT INTO NEW RELIC
+ * Extract parameters required for New Relic if they exist
+ * id from the token.
+ * @param req A request Token
+ * @returns SAAS CONTEXT CLAIMS
+ */
+module.exports.getNRClaims = function(req) {
+    //Initialize Claim Object
+    var claims = {};
+    var bearerToken = req.get('Authorization');
+    if (bearerToken) {
+        bearerToken = bearerToken.substring(bearerToken.indexOf(' ') + 1);
+        var decodedIdToken = jwtDecode(bearerToken);
+        if (decodedIdToken)
+           claims = {
+            "role": decodedIdToken['custom:role'],
+            "sub": decodedIdToken['sub'],
+            "iss": decodedIdToken['iss'],
+            "username": decodedIdToken['cognito:username'],
+            "auth_time": decodedIdToken['auth_time'],
+            "exp": decodedIdToken['exp'],
+            "iat": decodedIdToken['iat'],
+            "tenant_id": decodedIdToken['custom:tenant_id'],
+            "tier": decodedIdToken['custom:tier']
+           }
+    }
+    return claims;
+}
+
+/**
+ * USED TO OBTAIN OS HOST NAME - USED FOR NEW RELIC TO CORRELATE REQUEST TO HOST
+ * Extract os name required for New Relic to obtain request per host
+ * @returns SAAS CONTEXT CLAIMS
+ */
+module.exports.getOS = function() {
+    var hostname = '';
+    if (os.hostname()) {
+        hostname = os.hostname();
+    }
+    return hostname;
 }
 
 /**

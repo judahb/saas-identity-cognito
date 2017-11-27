@@ -1,4 +1,5 @@
 'use strict';
+const newrelic = require('newrelic');
 
 //  Express
 const express = require('express');
@@ -21,9 +22,12 @@ const DynamoDBHelper = require('../shared-modules/dynamodb-helper/dynamodb-helpe
 
 // Instantiate application
 var app = express();
-var bearerToken = '';
-var tenantId = '';
-
+//Get hostname
+var hostname = tokenManager.getOS();var bearerToken = '';
+var tenant_id = '';
+var claims = {};
+var session_id = '';
+var nrclaims = {};
 // Configure middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -33,7 +37,19 @@ app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
     bearerToken = req.get('Authorization');
     if (bearerToken) {
-        tenantId = tokenManager.getTenantId(req);
+        tenant_id = tokenManager.getTenantId(req);
+    }
+    if (bearerToken) {
+        claims = tokenManager.decodeToken(bearerToken);
+    }
+    if (bearerToken) {
+        session_id = tokenManager.getSessionID(req);
+    }
+    if (bearerToken) {
+        nrclaims = tokenManager.getNRClaims(req);
+    }
+    if (hostname) {
+        newrelic.addCustomParameter('req_host', hostname);
     }
     next();
 });
@@ -42,11 +58,11 @@ app.use(function(req, res, next) {
 var productSchema = {
     TableName : configuration.table.product,
     KeySchema: [
-        { AttributeName: "tenantId", KeyType: "HASH"},  //Partition key
+        { AttributeName: "tenant_id", KeyType: "HASH"},  //Partition key
         { AttributeName: "productId", KeyType: "RANGE" }  //Sort key
     ],
     AttributeDefinitions: [
-        { AttributeName: "tenantId", AttributeType: "S" },
+        { AttributeName: "tenant_id", AttributeType: "S" },
         { AttributeName: "productId", AttributeType: "S" }
     ],
     ProvisionedThroughput: {
@@ -66,7 +82,7 @@ app.get('/product/:id', function(req, res) {
     tokenManager.getCredentialsFromToken(req, function(credentials) {
         // init params structure with request params
         var params = {
-            tenantId: tenantId,
+            tenant_id: tenant_id,
             productId: req.params.id
         }
 
@@ -75,10 +91,17 @@ app.get('/product/:id', function(req, res) {
 
         dynamoHelper.getItem(params, credentials, function (err, product) {
             if (err) {
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(params);
+                newrelic.noticeError(err.message, nrclaims);
                 winston.error('Error getting product: ' + err.message);
                 res.status(400).send('{"Error" : "Error getting product"}');
             }
             else {
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(product);
                 winston.debug('Product ' + req.params.id + ' retrieved');
                 res.status(200).send(product);
             }
@@ -87,13 +110,13 @@ app.get('/product/:id', function(req, res) {
 });
 
 app.get('/products', function(req, res) {
-    winston.debug('Fetching Products for Tenant Id: ' + tenantId);
+    winston.debug('Fetching Products for Tenant Id: ' + tenant_id);
     tokenManager.getCredentialsFromToken(req, function(credentials) {
         var searchParams = {
             TableName: productSchema.TableName,
-            KeyConditionExpression: "tenantId = :tenantId",
+            KeyConditionExpression: "tenant_id = :tenant_id",
             ExpressionAttributeValues: {
-                ":tenantId": tenantId
+                ":tenant_id": tenant_id
             }
         };
 
@@ -102,11 +125,18 @@ app.get('/products', function(req, res) {
 
         dynamoHelper.query(searchParams, credentials, function (error, products) {
             if (error) {
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(searchParams);
+                newrelic.noticeError(error.message, nrclaims);
                 winston.error('Error retrieving products: ' + error.message);
                 res.status(400).send('{"Error" : "Error retrieving products"}');
             }
             else {
                 winston.debug('Products successfully retrieved');
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(products);
                 res.status(200).send(products);
             }
 
@@ -118,7 +148,7 @@ app.post('/product', function(req, res) {
     tokenManager.getCredentialsFromToken(req, function(credentials) {
         var product = req.body;
         product.productId = uuidV4();
-        product.tenantId = tenantId;
+        product.tenant_id = tenant_id;
 
         // construct the helper object
         var dynamoHelper = new DynamoDBHelper(productSchema, credentials, configuration);
@@ -126,10 +156,17 @@ app.post('/product', function(req, res) {
         dynamoHelper.putItem(product, credentials, function (err, product) {
             if (err) {
                 winston.error('Error creating new product: ' + err.message);
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(req.body);
+                newrelic.noticeError(err.message, nrclaims);
                 res.status(400).send('{"Error" : "Error creating product"}');
             }
             else {
                 winston.debug('Product ' + req.body.title + ' created');
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(product);
                 res.status(200).send({status: 'success'});
             }
         });
@@ -141,7 +178,7 @@ app.put('/product', function(req, res) {
     tokenManager.getCredentialsFromToken(req, function(credentials) {
         // init the params from the request data
         var keyParams = {
-            tenantId: tenantId,
+            tenant_id: tenant_id,
             productId: req.body.productId
         }
 
@@ -179,10 +216,17 @@ app.put('/product', function(req, res) {
         dynamoHelper.updateItem(productUpdateParams, credentials, function (err, product) {
             if (err) {
                 winston.error('Error updating product: ' + err.message);
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(req.body);
+                newrelic.noticeError(err.message, nrclaims);
                 res.status(400).send('{"Error" : "Error updating product"}');
             }
             else {
                 winston.debug('Product ' + req.body.title + ' updated');
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(product);
                 res.status(200).send(product);
             }
         });
@@ -197,7 +241,7 @@ app.delete('/product/:id', function(req, res) {
         var deleteProductParams = {
             TableName : productSchema.TableName,
             Key: {
-                tenantId: tenantId,
+                tenant_id: tenant_id,
                 productId: req.params.id
             }
         };
@@ -208,10 +252,17 @@ app.delete('/product/:id', function(req, res) {
         dynamoHelper.deleteItem(deleteProductParams, credentials, function (err, product) {
             if (err) {
                 winston.error('Error deleting product: ' + err.message);
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(deleteProductParams.Key);
+                newrelic.noticeError(err.message, nrclaims);
                 res.status(400).send('{"Error" : "Error deleting product"}');
             }
             else {
                 winston.debug('Product ' + req.params.id + ' deleted');
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(product);
                 res.status(200).send({status: 'success'});
             }
         });

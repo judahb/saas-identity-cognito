@@ -7,7 +7,7 @@
  * # OrdersCtrl
  * Controller of the clientApp
  */
-angular.module('clientApp').controller('OrdersCtrl', function ($scope, $http, $filter, Constants) {
+angular.module('clientApp').controller('OrdersCtrl', function ($scope, $http, $filter, $rootScope, Constants) {
   $http.get(Constants.ORDER_MANAGER_URL + '/orders')
     .then(function(response) {
       $scope.orders = response.data;
@@ -21,6 +21,16 @@ angular.module('clientApp').controller('OrdersCtrl', function ($scope, $http, $f
           productFilterDict[productDescription] = "";
       }
       $scope.productFilterValues = Object.keys(productFilterDict);
+
+      //New Relic Code for SPA
+      newrelic.interaction()
+        .setAttribute('session_id', $rootScope.session_id)
+        .setAttribute('role', $rootScope.userRole)
+        .setAttribute('tenant_id', $rootScope.tenant_id)
+        .setAttribute('username', $rootScope.currentUser)
+        .setAttribute('action', "orders")
+        .save();
+
     })
     .catch(function(response) {
       console.error('Error getting orders', response.status, response.data);

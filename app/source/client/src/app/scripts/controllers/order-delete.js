@@ -7,12 +7,22 @@
  * # OrderDeleteCtrl
  * Controller of the clientApp
  */
-angular.module('clientApp').controller('OrderDeleteCtrl', function ($scope, $location, $http, $route, $routeParams, Constants) {
-
+angular.module('clientApp').controller('OrderDeleteCtrl', function ($scope, $location, $http, $route, $rootScope, $routeParams, Constants) {
   // fetch the item to delete
   $http.get(Constants.ORDER_MANAGER_URL + '/order/' + $routeParams.id)
     .then(function(response) {
       $scope.order = response.data;
+
+      //New Relic Code for SPA
+      newrelic.interaction()
+        .setAttribute('session_id', $rootScope.session_id)
+        .setAttribute('role', $rootScope.userRole)
+        .setAttribute('tenant_id', $rootScope.tenant_id)
+        .setAttribute('username', $rootScope.currentUser)
+        .setAttribute('action', "order-delete")
+        .save();
+
+
     })
     .catch(function(response) {
       $scope.error = "Error getting order: " + response.message;

@@ -8,6 +8,14 @@
  * Controller of the clientApp
  */
 angular.module('clientApp').controller('UserAddCtrl', function ($scope, $location, $http, $route, $rootScope, Constants) {
+//New Relic Code for SPA
+  newrelic.interaction()
+    .setAttribute('session_id', $rootScope.session_id)
+    .setAttribute('role', $rootScope.userRole)
+    .setAttribute('tenant_id', $rootScope.tenant_id)
+    .setAttribute('username', $rootScope.currentUser)
+    .setAttribute('action', "user-add")
+    .save();
   $scope.addUser = true;
   $scope.user = {};
   $scope.user.role = $rootScope.userRole;

@@ -8,6 +8,14 @@
  * Controller of the clientApp
  */
 angular.module('clientApp').controller('ConfirmCtrl', function ($scope, $rootScope, $location, $route, $http, Constants, jwtHelper) {
+//New Relic Code for SPA
+  newrelic.interaction()
+    .setAttribute('session_id', $rootScope.session_id)
+    .setAttribute('role', $rootScope.userRole)
+    .setAttribute('tenant_id', $rootScope.tenant_id)
+    .setAttribute('username', $rootScope.currentUser)
+    .setAttribute('action', "confirm")
+    .save();
   $scope.formSubmit = function () {
     if ($scope.newPassword !== $scope.confirmPassword) {
       $scope.error = "Passwords do not match.";

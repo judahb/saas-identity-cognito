@@ -25,11 +25,21 @@ angular.module('clientApp').controller('RegisterCtrl', function ($scope, $http, 
         lastName: $scope.tenant.lastName
       };
 
+
       $http.post(Constants.TENANT_REGISTRATION_URL + '/reg', tenant)
         .then(function(data) {
+
           console.log('Registration success');
           $scope.hideRegistrationForm = true;
           $scope.showSuccessMessage = true;
+
+          //New Relic Code for SPA
+          newrelic.interaction()
+            .setAttribute('companyName', $scope.tenant.companyName)
+            .setAttribute('userName', $scope.tenant.email)
+            .setAttribute('action', "register")
+            .save();
+
         })
         .catch(function(response) {
           $scope.error = "Unable to create new account";

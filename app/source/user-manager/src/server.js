@@ -1,4 +1,5 @@
 'use strict';
+const newrelic = require('newrelic');
 
 // Declare dependencies
 const express = require('express');
@@ -24,9 +25,14 @@ winston.level = configuration.loglevel;
 //Variables that are provided through a token
 var bearerToken = '';
 var tenantId = '';
-
+var claims = {};
+var session_id = '';
+var nrclaims = {};
 // instantiate application
 var app = express();
+
+//Get hostname
+var hostname = tokenManager.getOS();
 
 // configure middleware
 app.use(bodyParser.json());
@@ -41,6 +47,18 @@ app.use(function (req, res, next) {
     bearerToken = req.get('Authorization');
     if (bearerToken) {
         tenantId = tokenManager.getTenantId(req);
+    }
+    if (bearerToken) {
+        claims = tokenManager.decodeToken(bearerToken);
+    }
+    if (bearerToken) {
+        session_id = tokenManager.getSessionID(req);
+    }
+    if (bearerToken) {
+        nrclaims = tokenManager.getNRClaims(req);
+    }
+    if (hostname) {
+        newrelic.addCustomParameter('req_host', hostname);
     }
     next();
 });
@@ -243,15 +261,27 @@ app.get('/user/:id', function (req, res) {
         var tenantId = tokenManager.getTenantId(req);
 
         lookupUserPoolData(credentials, req.params.id, tenantId, false, function(err, user) {
-            if (err)
+            if (err){
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameter('tenantId', tenantId);
+                newrelic.noticeError(err, nrclaims);
                 res.status(400).send('{"Error" : "Error getting user"}');
+            }
             else {
                 cognitoUsers.getCognitoUser(credentials, user, function (err, user) {
                     if (err) {
+                        newrelic.addCustomParameter('session_id', session_id);
+                        newrelic.addCustomParameters(nrclaims);
+                        newrelic.addCustomParameter('tenantId', tenantId);
+                        newrelic.noticeError(err, nrclaims);
                         res.status(400);
                         res.json('Error lookup user user: ' + req.params.id);
                     }
                     else {
+                        newrelic.addCustomParameter('session_id', session_id);
+                        newrelic.addCustomParameters(nrclaims);
+                        newrelic.addCustomParameters(user);
                         res.json(user);
                     }
                 })
@@ -268,9 +298,15 @@ app.get('/users', function (req, res) {
         var userPoolId = getUserPoolIdFromRequest(req);
         cognitoUsers.getUsersFromPool(credentials, userPoolId, configuration.aws_region)
             .then(function (userList) {
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(userList);
                 res.status(200).send(userList);
             })
             .catch(function(error) {
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.noticeError(error.message, nrclaims);
                 res.status(400).send("Error retrieving user list: " + error.message);
             });
     })
@@ -299,14 +335,24 @@ app.post('/user', function (req, res) {
                 createNewUser(credentials, userPoolData.UserPoolId, userPoolData.IdentityPoolId, userPoolData.client_id, user.tenant_id, user)
                     .then(function(createdUser) {
                         winston.debug('User ' + user.userName + ' created');
+                        newrelic.addCustomParameter('session_id', session_id);
+                        newrelic.addCustomParameters(nrclaims);
+                        newrelic.addCustomParameters(createdUser);
                         res.status(200).send({status: 'success'});
                     })
                     .catch(function(err) {
+                        newrelic.addCustomParameter('session_id', session_id);
+                        newrelic.addCustomParameters(nrclaims);
+                        newrelic.addCustomParameters(user);
+                        newrelic.noticeError(err.message, nrclaims);
                         winston.error('Error creating new user in DynamoDB: ' + err.message);
                         res.status(400).send('{"Error" : "Error creating user in DynamoDB"}');
                     });
             }
             else {
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(req);
                 res.status(400).send('{"Error" : "User pool not found"}');
             }
         });
@@ -329,9 +375,13 @@ app.post('/user/system', function (req, res) {
             provisionAdminUserWithRoles(user, credentials, configuration.userRole.systemAdmin, configuration.userRole.systemUser,
                 function (err, result) {
                     if (err) {
+                        newrelic.addCustomParameters(user);
+                        newrelic.noticeError(err.message, user);
                         res.status(400).send("Error provisioning system admin user");
                     }
                     else {
+                        newrelic.addCustomParameters(user);
+                        newrelic.addCustomParameters(result);
                         res.status(200).send(result);
                     }
                 });
@@ -358,10 +408,15 @@ app.post('/user/reg', function (req, res) {
             function(err, result) {
                 if (err)
                 {
+                    newrelic.addCustomParameters(user);
+                    newrelic.noticeError(err.message, user);
                     res.status(400).send("Error provisioning tenant admin user");
                 }
-                else
+                else {
+                    newrelic.addCustomParameters(user);
+                    newrelic.addCustomParameters(result);
                     res.status(200).send(result);
+                }
             });
     });
 
@@ -373,10 +428,16 @@ app.post('/user/reg', function (req, res) {
  */
 app.put('/user/enable', function (req, res) {
     updateUserEnabledStatus(req, true, function(err, result) {
-        if (err)
+        if (err) {
+            newrelic.addCustomParameters(nrclaims);
+            newrelic.noticeError(err.message, nrclaims);
             res.status(400).send('Error enabling user');
-        else
+        }
+        else {
+            newrelic.addCustomParameters(nrclaims);
+            newrelic.addCustomParameters(result);
             res.status(200).send(result);
+        }
     });
 });
 
@@ -386,10 +447,16 @@ app.put('/user/enable', function (req, res) {
  */
 app.put('/user/disable', function (req, res) {
     updateUserEnabledStatus(req, false, function(err, result) {
-        if (err)
+        if (err) {
+            newrelic.addCustomParameters(nrclaims);
+            newrelic.noticeError(err.message, nrclaims);
             res.status(400).send('Error disabling user');
-        else
+        }
+        else {
+            newrelic.addCustomParameters(nrclaims);
+            newrelic.addCustomParameters(result);
             res.status(200).send(result);
+        }
     });
 });
 
@@ -405,9 +472,14 @@ app.put('/user', function (req, res) {
         // update user data
         cognitoUsers.updateUser(credentials, user, userPoolId, configuration.aws_region)
             .then(function(updatedUser) {
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(updatedUser);
                 res.status(200).send(updatedUser);
             })
             .catch(function(err) {
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(user);
+                newrelic.noticeError(err.message, user);
                 res.status(400).send("Error updating user: " + err.message);
             });
     });
@@ -454,10 +526,17 @@ app.delete('/user/:id', function (req, res) {
                         dynamoHelper.deleteItem(deleteUserParams, credentials, function (err, user) {
                             if (err) {
                                 winston.error('Error deleting DynamoDB user: ' + err.message);
+                                newrelic.addCustomParameter('session_id', session_id);
+                                newrelic.addCustomParameters(nrclaims);
+                                newrelic.addCustomParameters(deleteUserParams);
+                                newrelic.noticeError(err.message, deleteUserParams);
                                 res.status(400).send('{"Error" : "Error deleting DynamoDB user"}');
                             }
                             else {
                                 winston.debug('User ' + userName + ' deleted from DynamoDB');
+                                newrelic.addCustomParameter('session_id', session_id);
+                                newrelic.addCustomParameters(nrclaims);
+                                newrelic.addCustomParameters(user);
                                 res.status(200).send({status: 'success'});
                             }
                         })

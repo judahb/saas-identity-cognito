@@ -11,6 +11,7 @@
     "amazon-cognito-js": "1.1.0",
     "aws-sdk": "2.24.0",
     "body-parser": "latest",
+    "newrelic": "^2.2.1",
     "config": "1.25.1",
     "express": "latest",
     "winston": "latest"

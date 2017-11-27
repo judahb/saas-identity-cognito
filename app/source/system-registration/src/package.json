@@ -13,6 +13,7 @@
     "body-parser": "latest",
     "config": "1.25.1",
     "express": "latest",
+    "newrelic": "^2.2.1",
     "request": "2.81.0",
     "uuid": "3.0.1",
     "winston": "latest"

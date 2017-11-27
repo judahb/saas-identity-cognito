@@ -43,6 +43,10 @@ Parameters:
     Type: String
   ArtifactBucket:
     Type: String
+  NewRelicLicenseKey:
+    Description: The New Relic License Key for New Relic Account.
+    Type: String
+    Default: NEW_RELIC_LICENSE_KEY
 Resources:
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
@@ -292,7 +296,8 @@ Resources:
                 "ServiceName": "${ServiceName}",
                 "Priority": "${Priority}",
                 "ContainerPort": "${ContainerPort}",
-                "Repository": "${Repository}"
+                "Repository": "${Repository}",
+                "NewRelicLicenseKey": "${NewRelicLicenseKey}"
               }
           InputArtifacts:
           - Name: Template

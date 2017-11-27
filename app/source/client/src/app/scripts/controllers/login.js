@@ -8,6 +8,11 @@
  * Controller of the clientApp
  */
 angular.module('clientApp').controller('LoginCtrl', function ($scope, $rootScope, $location, $route, $http, Constants, jwtHelper) {
+//New Relic Code for SPA
+  newrelic.interaction()
+    .setAttribute('username', $scope.username)
+    .setAttribute('action', "login")
+    .save();
 
   $scope.formSubmit = function () {
     var user = {
@@ -30,6 +35,8 @@ angular.module('clientApp').controller('LoginCtrl', function ($scope, $rootScope
           var decodedToken = jwtHelper.decodeToken($rootScope.bearerToken);
           $rootScope.userDisplayName = decodedToken['given_name'] + ' ' + decodedToken['family_name'];
           $rootScope.userRole = decodedToken['custom:role'];
+          $rootScope.session_id = decodedToken['custom:tenant_id'] + '_' + decodedToken['sub'] + '_' + decodedToken['auth_time'];
+          $rootScope.tenant_id = decodedToken['custom:tenant_id'];
           $scope.error = '';
           $scope.username = '';
           $scope.password = '';

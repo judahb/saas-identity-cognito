@@ -7,7 +7,15 @@
  * # UserEnableCtrl
  * Controller of the clientApp
  */
-angular.module('clientApp').controller('UserEnableCtrl', function ($scope, $location, $http, $route, $routeParams, Constants) {
+angular.module('clientApp').controller('UserEnableCtrl', function ($scope, $location, $http, $route, $routeParams, $rootScope, Constants) {
+//New Relic Code for SPA
+  newrelic.interaction()
+    .setAttribute('session_id', $rootScope.session_id)
+    .setAttribute('role', $rootScope.userRole)
+    .setAttribute('tenant_id', $rootScope.tenant_id)
+    .setAttribute('username', $rootScope.currentUser)
+    .setAttribute('action', "user-enable")
+    .save();
   // fetch the item to edit
   $scope.user = {};
 

@@ -7,7 +7,15 @@
  * # UserDeleteCtrl
  * Controller of the clientApp
  */
-angular.module('clientApp').controller('UserDeleteCtrl', function ($scope, $location, $http, $route, $routeParams, Constants) {
+angular.module('clientApp').controller('UserDeleteCtrl', function ($scope, $location, $http, $route, $routeParams, $rootScope, Constants) {
+//New Relic Code for SPA
+  newrelic.interaction()
+    .setAttribute('session_id', $rootScope.session_id)
+    .setAttribute('role', $rootScope.userRole)
+    .setAttribute('tenant_id', $rootScope.tenant_id)
+    .setAttribute('username', $rootScope.currentUser)
+    .setAttribute('action', "user-delete")
+    .save();
   // fetch the item to delete
   $http.get(Constants.USER_MANAGER_URL + '/user/' + $routeParams.id)
     .then(function(response) {

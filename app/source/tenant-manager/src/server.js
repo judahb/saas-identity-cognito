@@ -1,4 +1,5 @@
 'use strict';
+const newrelic = require('newrelic');
 
 // Configure Express
 const express = require('express');
@@ -21,6 +22,14 @@ AWS.config.update({region: configuration.aws_region});
 // Instantiate application
 var app = express();
 
+//Get hostname
+var hostname = tokenManager.getOS();
+
+var claims = {};
+var bearerToken = '';
+var tenantId = '';
+var session_id = '';
+var nrclaims = {};
 // Configure middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -28,6 +37,21 @@ app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
     res.header("Access-Control-Allow-Headers", "Content-Type, Origin, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token, Access-Control-Allow-Headers, X-Requested-With, Access-Control-Allow-Origin");
+    bearerToken = req.get('Authorization');
+    if (bearerToken)
+        tenantId = tokenManager.getTenantId(req);
+    if (bearerToken) {
+        claims = tokenManager.decodeToken(bearerToken);
+    }
+    if (bearerToken) {
+        session_id = tokenManager.getSessionID(req);
+    }
+    if (bearerToken) {
+        nrclaims = tokenManager.getNRClaims(req);
+    }
+    if (hostname) {
+        newrelic.addCustomParameter('req_host', hostname);
+    }
     next();
 });
 
@@ -66,10 +90,17 @@ app.get('/tenant/:id', function (req, res) {
         dynamoHelper.getItem(tenantIdParam, credentials, function (err, tenant) {
             if (err) {
                 winston.error('Error getting tenant: ' + err.message);
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(tenantIdParam);
+                newrelic.noticeError(err.message, nrclaims);
                 res.status(400).send('{"Error" : "Error getting tenant"}');
             }
             else {
                 winston.debug('Tenant ' + req.params.id + ' retrieved');
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(tenant);
                 res.status(200).send(tenant);
             }
         });
@@ -90,10 +121,17 @@ app.get('/tenants', function(req, res) {
         dynamoHelper.scan(scanParams, credentials, function (error, tenants) {
             if (error) {
                 winston.error('Error retrieving tenants: ' + error.message);
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(scanParams);
+                newrelic.noticeError(error.message, nrclaims);
                 res.status(400).send('{"Error" : "Error retrieving tenants"}');
             }
             else {
                 winston.debug('Tenants successfully retrieved');
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(tenants);
                 res.status(200).send(tenants);
             }
 
@@ -117,10 +155,14 @@ app.get('/tenants/system', function(req, res) {
         dynamoHelper.scan(scanParams, credentials, function (error, tenants) {
             if (error) {
                 winston.error('Error retrieving tenants: ' + error.message);
+                newrelic.addCustomParameters(scanParams);
+                newrelic.noticeError(err.message, scanParams);
                 res.status(400).send('{"Error" : "Error retrieving tenants"}');
             }
             else {
                 winston.debug('Tenants successfully retrieved');
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(tenants);
                 res.status(200).send(tenants);
             }
 
@@ -141,10 +183,14 @@ app.post('/tenant', function(req, res) {
         dynamoHelper.putItem(tenant, credentials, function (err, tenant) {
             if (err) {
                 winston.error('Error creating new tenant: ' + err.message);
+                newrelic.addCustomParameters(tenant);
+                newrelic.noticeError(err.message, tenant);
                 res.status(400).send('{"Error" : "Error creating tenant"}');
             }
             else {
                 winston.debug('Tenant ' + tenant.id + ' created');
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(tenant);
                 res.status(200).send({status: 'success'});
             }
         });
@@ -207,10 +253,17 @@ app.put('/tenant', function(req, res) {
         dynamoHelper.updateItem(tenantUpdateParams, credentials, function (err, tenant) {
             if (err) {
                 winston.error('Error updating tenant: ' + err.message);
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(tenantUpdateParams);
+                newrelic.noticeError(err.message, nrclaims);
                 res.status(400).send('{"Error" : "Error updating tenant"}');
             }
             else {
                 winston.debug('Tenant ' + req.body.title + ' updated');
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(tenant);
                 res.status(200).send(tenant);
             }
         });
@@ -232,13 +285,20 @@ app.delete('/tenant/:id', function(req, res) {
         // construct the helper object
         var dynamoHelper = new DynamoDBHelper(tenantSchema, credentials, configuration);
 
-        dynamoHelper.deleteItem(deleteTenantParams, credentials, function (err, product) {
+        dynamoHelper.deleteItem(deleteTenantParams, credentials, function (err, tenant) {
             if (err) {
                 winston.error('Error deleting tenant: ' + err.message);
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(deleteTenantParams);
+                newrelic.noticeError(err.message, nrclaims);
                 res.status(400).send('{"Error" : "Error deleting tenant"}');
             }
             else {
                 winston.debug('Tenant ' + req.params.id + ' deleted');
+                newrelic.addCustomParameter('session_id', session_id);
+                newrelic.addCustomParameters(nrclaims);
+                newrelic.addCustomParameters(tenant);
                 res.status(200).send({status: 'success'});
             }
         });

@@ -16,6 +16,7 @@
     "express": "latest",
     "jsonwebtoken": "7.3.0",
     "jwk-to-pem": "1.2.6",
+    "newrelic": "^2.2.1",
     "request": "2.81.0",
     "winston": "latest"
   },

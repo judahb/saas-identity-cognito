@@ -1,4 +1,5 @@
 'use strict';
+const newrelic = require('newrelic');
 
 // Declare library dependencies
 const express = require('express');
@@ -9,6 +10,9 @@ const request = require('request');
 //Configure Environment
 const configModule = require('../shared-modules/config-helper/config.js');
 var configuration = configModule.configure(process.env.NODE_ENV);
+
+//Configure Token Manager
+const tokenManager = require('../shared-modules/token-manager/token-manager.js');
 
 //Configure Logging
 const winston = require('winston');
@@ -21,6 +25,9 @@ var userURL   = configuration.url.user;
 // Instantiate application
 var app = express();
 
+//Get hostname
+var hostname = tokenManager.getOS();
+
 // Configure middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -30,6 +37,9 @@ app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
     res.header("Access-Control-Allow-Headers", "Content-Type, Origin, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token, Access-Control-Allow-Headers, X-Requested-With, Access-Control-Allow-Origin");
+    if (hostname) {
+        newrelic.addCustomParameter('req_host', hostname);
+    }
     // intercept OPTIONS method
     if ('OPTIONS' == req.method) {
         res.send(200);

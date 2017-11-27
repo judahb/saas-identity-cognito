@@ -42,6 +42,11 @@ Metadata:
       - TenantTable
       - ProductTable
       - OrderTable
+    - Label:
+        default: New Relic License Configuration
+      Parameters:
+      - NewRelicLicenseKey
+      - NewRelicRumBeacon
     ParameterLabels:
       AvailabilityZones:
         default: Availability Zones
@@ -77,6 +82,10 @@ Metadata:
         default: Product
       OrderTable:
         default: Order
+      NewRelicLicenseKey:
+        default: New Relic License
+      NewRelicRumBeacon:
+        default: New Relic JavaScript Agent (RUM) Beacon
 Parameters:
   AvailabilityZones:
     Description: 'List of Availability Zones to use for the subnets in the VPC. Note:
@@ -117,7 +126,7 @@ Parameters:
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    Default: quickstart-reference
+    Default: saas-identity-cognito-newrelic
     Description: S3 bucket name for the Quick Start assets. Quick Start bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
@@ -126,7 +135,7 @@ Parameters:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and a forward slash (/) at the end of the prefix.
-    Default: saas/identity/cognito/latest/
+    Default: 1/
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
@@ -169,6 +178,14 @@ Parameters:
     Description: The DynamoDB Table for Orders of the Multi-Tenant System
     Default: Order
     Type: String
+  NewRelicLicenseKey:
+    Description: The New Relic License Key for New Relic Account.
+    Type: String
+    Default: NEW_RELIC_LICENSE_KEY
+  NewRelicRumBeacon:
+    Description: New Relic JavaScript Agent URL for RUM
+    Type: String
+    Default: '{beacon:"bam.nr-data.net",errorBeacon:"bam.nr-data.net",licenseKey:"1234",applicationID:"5678",sa:1}'
 Resources:
   VPCStack:
     Type: AWS::CloudFormation::Stack
@@ -219,6 +236,8 @@ Resources:
         TenantTable: !Ref TenantTable
         ProductTable: !Ref ProductTable
         OrderTable: !Ref OrderTable
+        NewRelicLicenseKey: !Ref NewRelicLicenseKey
+        NewRelicRumBeacon: !Ref NewRelicRumBeacon
         VPCID:
           !GetAtt
           - VPCStack
